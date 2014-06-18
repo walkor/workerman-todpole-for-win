@@ -1,4 +1,4 @@
-#!/usr/local/bin/php5.5
+#!/usr/bin/env php
 <?php
 error_reporting(E_ALL);
 ini_set('display_errors', 'on');
@@ -17,7 +17,7 @@ define('WORKERMAN_ROOT_DIR', realpath(__DIR__."/../")."/");
 
 chdir(WORKERMAN_ROOT_DIR);
 
-if(0 === strpos('win', strtolower(PHP_OS)))
+if(0 === strpos(strtolower(PHP_OS), 'win'))
 {
     exit("Workerman can not run on Windows operating system\n");
 }
