@@ -13,6 +13,8 @@ workerman-todpole-multithread
 linux 平台直接运行 ./workermand/bin/workermand start 即可（注意：多线程版本需要你的php是线程安全的，即编译时启用了--enable-maintainer-zts选项，并且安装了pthreads扩展）  
 windows 平台双击运行 start.bat（注意：windows平台也需要php是线程安全版本，并且有pthreads扩展，start.bat默认使用的是此版本库中的具有pthreads扩展并且线程安全的php，用户也可以在 http://windows.php.net/download/ 上自行下载并在start.bat中将php执行路径替换）  
 
+运行起来后浏览器访问 http://ip:8383 例如 http://127.0.0.1:8383
+
 参考资料
 ========
 pthreads:[http://cn2.php.net/manual/zh/pthreads.installation.php](http://cn2.php.net/manual/zh/pthreads.installation.php)
