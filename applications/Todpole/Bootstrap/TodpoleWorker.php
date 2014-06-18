@@ -14,7 +14,6 @@ class TodpoleWorker extends Man\Core\SocketWorker
 {
     public function dealInput($recv_str)
     {
-        file_put_contents('/tmp/debug', $recv_str, FILE_APPEND);
         return GatewayProtocol::input($recv_str); 
     }
 

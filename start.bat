@@ -1,0 +1,1 @@
+Start "" php/php-ts.exe workerman/bin/start.php start
