@@ -12,6 +12,7 @@ require_once WORKERMAN_ROOT_DIR . 'Core/Lib/Task.php';
 require_once WORKERMAN_ROOT_DIR . 'Core/Lib/Log.php';
 require_once WORKERMAN_ROOT_DIR . 'Core/Lib/Mutex.php';
 require_once WORKERMAN_ROOT_DIR . 'Core/SocketWorker.php';
+require_once WORKERMAN_ROOT_DIR . 'Core/ThreadWorker.php';
 
 /**
  * 
@@ -306,50 +307,25 @@ class Master
     protected static function createWorkers()
     {
         // 循环读取配置创建一定量的worker进程
-        foreach (Lib\Config::getAllWorkers() as $worker_name=>$config)
+        $workers = Lib\Config::getAllWorkers();
+        foreach ($workers as $worker_name=>$config)
         {
-            // 初始化
-            if(empty(self::$threads->$worker_name))
+            while(empty(self::$threads->$worker_name) || count(self::$threads->$worker_name) < $config['start_workers'])
             {
-                self::$threads->$worker_name = new \Stackable();
-            }
-    
-            while(count(self::$threads->$worker_name) < $config['start_workers'])
-            {
-                $thread = self::forkOneWorker($worker_name);
+                // 初始化
+                if(empty(self::$threads->$worker_name))
+                {
+                    self::$threads->$worker_name = new \Stackable();
+                }
+                $worker_file = \Man\Core\Lib\Config::get($worker_name.'.worker_file');
+                $main_socket = isset(self::$listenedSockets[$worker_name]) ? self::$listenedSockets[$worker_name] : null;
+                $thread = new \Man\Core\ThreadWorker($main_socket, $worker_file, $worker_name);
+                $thread->start();
                 $thread_id = $thread->getThreadId();
                 self::$threads->$worker_name->$thread_id = $thread;
             }
         }
     }
-    
-    /**
-     * 创建一个worker进程
-     * @param string $worker_name worker的名称
-     * @return int 父进程:>0得到新worker的pid ;<0 出错; 子进程:始终为0
-     */
-    protected static function forkOneWorker($worker_name)
-    {
-        require_once WORKERMAN_ROOT_DIR . 'Core/ThreadWorker.php';
-        // 查找worker文件
-        if($worker_file = \Man\Core\Lib\Config::get($worker_name.'.worker_file'))
-        {
-            $service_name = basename($worker_file, '.php');
-        }
-        else
-        {
-            $service_name = $worker_name;
-            $worker_file = WORKERMAN_ROOT_DIR . "workers/$worker_name.php";
-        }
-        
-        $main_socket = isset(self::$listenedSockets[$worker_name]) ? self::$listenedSockets[$worker_name] : null;
-        
-        $thread = new \Man\Core\ThreadWorker($main_socket, $worker_file, $worker_name);
-        
-        $thread->start();
-        return $thread;
-    }
-    
     
     /**
      * 安装相关信号控制器
@@ -405,9 +381,9 @@ class Master
             usleep(100000);
             foreach(self::$threads as $worker_name => $threads)
             {
-                //var_dump(self::$threads);
                 foreach($threads as $thread_id => $thread)
                 {
+                    //var_dump($thread_id, $thread->isTerminated());
                     if($thread->isTerminated())
                     {
                         //echo "isTerminated\n";

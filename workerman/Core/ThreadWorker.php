@@ -24,8 +24,7 @@ class ThreadWorker extends \Thread
     
     public function run()
     {
-        //require_once WORKERMAN_ROOT_DIR . '../applications/EchoWorker/EchoWorker.php';
-        //$class_name = 'EchoWorker';
+        \Man\Core\Lib\Config::reload();
         chdir(WORKERMAN_ROOT_DIR);
         require_once $this->workerFile;
         $worker = new $this->className($this->serviceName);
@@ -35,7 +34,6 @@ class ThreadWorker extends \Thread
         {
             $worker->setListendSocket($this->mainSocket);
         }
-        
         // 使worker开始服务
         $worker->start();
     }
