@@ -1,21 +1,108 @@
 <?php
 /**
  * 
- * 聊天主逻辑
- * 主要是处理 onConnect onMessage onClose 三个方法
- * @author walkor <worker-man@qq.com>
+ * 主逻辑
+ * 主要是处理 onGatewayMessage onMessage onClose 三个方法
+ * @author walkor <walkor@workerman.net>
  * 
  */
 
-require_once ROOT_DIR . '/Lib/Gateway.php';
-require_once ROOT_DIR . '/Protocols/WebSocket.php';
+use \Lib\Context;
+use \Lib\Gateway;
+use \Lib\StatisticClient;
+use \Lib\Store;
+use \Protocols\GatewayProtocol;
+use \Protocols\WebSocket;
 
 class Event
 {
+    /**
+     * 网关有消息时，判断消息是否完整，分包
+     */
+    public static function onGatewayMessage($buffer)
+    {
+        // 根据websocket协议判断数据是否接收完整
+        return WebSocket::check($buffer);
+    }
+    
    /**
-    * 当有用户连接时，并第一次发送数据时（或者说没调用notifyConnectionSuccess前）会触发该方法
+    * 有消息时
+    * @param int $client_id
+    * @param string $message
     */
-   public static function onConnect($message)
+   public static function onMessage($client_id, $message)
+   {
+       // 如果是websocket握手
+       if(self::checkHandshake($message))
+       {
+           $new_message ='{"type":"welcome","id":'.$client_id.'}';
+           // 发送数据包到客户端 
+           return GateWay::sendToCurrentClient(WebSocket::encode($new_message));
+           return;
+       }
+       
+       // websocket 通知连接即将关闭
+       if(WebSocket::isClosePacket($message))
+        {
+            Gateway::kickClient($client_id, '');
+            self::onClose($client_id);
+            return;
+        }
+        
+        // 获取客户端原始请求
+        $message = WebSocket::decode($message);
+        $message_data = json_decode($message, true);
+        if(!$message_data)
+        {
+            return ;
+        }
+        
+        switch($message_data['type'])
+        {
+            // 更新用户
+            case 'update':
+                // 转播给所有用户
+                Gateway::sendToAll(WebSocket::encode(json_encode(
+                        array(
+                                'type'     => 'update',
+                                'id'         => $client_id,
+                                'angle'   => $message_data["angle"]+0,
+                                'momentum' => $message_data["momentum"]+0,
+                                'x'                   => $message_data["x"]+0,
+                                'y'                   => $message_data["y"]+0,
+                                'life'                => 1,
+                                'name'           => isset($message_data['name']) ? $message_data['name'] : 'Guest.'.$client_id,
+                                'authorized'  => false,
+                                )
+                        )));
+                return;
+            // 聊天
+            case 'message':
+                // 向大家说
+                $new_message = array(
+                    'type'=>'message', 
+                    'id'=>$client_id,
+                    'message'=>$message_data['message'],
+                );
+                return Gateway::sendToAll(WebSocket::encode(json_encode($new_message)));
+        }
+   }
+   
+   /**
+    * 当用户断开连接时
+    * @param integer $client_id 用户id
+    */
+   public static function onClose($client_id)
+   {
+       // 广播 xxx 退出了
+       GateWay::sendToAll(WebSocket::encode(json_encode(array('type'=>'closed', 'id'=>$client_id))));
+   }
+   
+   /**
+    * websocket协议握手
+    * @param string $message
+    */
+   public static function checkHandshake($message)
    {
        // WebSocket 握手阶段
        if(0 === strpos($message, 'GET'))
@@ -33,91 +120,18 @@ class Event
            $new_message .= "Sec-WebSocket-Version: 13\r\n";
            $new_message .= "Connection: Upgrade\r\n";
            $new_message .= "Sec-WebSocket-Accept: " . $new_key . "\r\n\r\n";
-           
-           GateWay::sendToCurrentUid($new_message);
-           
-           // 把时间戳当成uid，这里也可以根据用户传递的信息，获取uid，例如通过url上的参数
-           $uid = (substr(strval(microtime(true)), 6, 7)*100)%1000000;
-          
-           // 记录uid到gateway通信地址的映射
-           GateWay::storeUid($uid);
-           
-           // 发送数据包到address对应的gateway，确认connection成功
-           GateWay::notifyConnectionSuccess($uid);
-           
-           // 广播给所有用户，该uid登录
-           $new_message ='{"type":"welcome","id":'.$uid.'}';
-           
+   
            // 发送数据包到客户端 完成握手
-           return GateWay::sendToCurrentUid(\WebSocket::encode($new_message));
+           Gateway::sendToCurrentClient($new_message);
+           return true;
        }
        // 如果是flash发来的policy请求
        elseif(trim($message) === '<policy-file-request/>')
        {
            $policy_xml = '<?xml version="1.0"?><cross-domain-policy><site-control permitted-cross-domain-policies="all"/><allow-access-from domain="*" to-ports="*"/></cross-domain-policy>'."\0";
-           return GateWay::sendToCurrentUid($policy_xml);
+           Gateway::sendToCurrentClient($policy_xml);
+           return true;
        }
-       
-       return null;
-   }
-   
-   /**
-    * 当用户断开连接时
-    * @param integer $uid 用户id 
-    */
-   public static function onClose($uid)
-   {
-       // 广播 xxx 退出了
-       GateWay::sendToAll(\WebSocket::encode(json_encode(array('type'=>'closed', 'id'=>$uid))));
-   }
-   
-   /**
-    * 有消息时
-    * @param int $uid
-    * @param string $message
-    */
-   public static function onMessage($uid, $message)
-   {
-        // $message len < 7 是用户退出了,直接返回，等待socket关闭触发onclose方法
-        if(strlen($message) < 7)
-        {
-            return ;
-        }
-        $message = \WebSocket::decode($message);
-        $message_data = json_decode($message, true);
-        if(!$message_data)
-        {
-            return ;
-        }
-        
-        switch($message_data['type'])
-        {
-            // 更新用户
-            case 'update':
-                // 转播给所有用户
-                Gateway::sendToAll(\WebSocket::encode(json_encode(
-                        array(
-                                'type'     => 'update',
-                                'id'         => $uid,
-                                'angle'   => $message_data["angle"]+0,
-                                'momentum' => $message_data["momentum"]+0,
-                                'x'                   => $message_data["x"]+0,
-                                'y'                   => $message_data["y"]+0,
-                                'life'                => 1,
-                                'name'           => isset($message_data['name']) ? $message_data['name'] : 'Guest.'.$uid,
-                                'authorized'  => false,
-                                )
-                        )));
-                return;
-            // 聊天
-            case 'message':
-                // 向大家说
-                $new_message = array(
-                    'type'=>'message', 
-                    'id'=>$uid,
-                    'message'=>$message_data['message'],
-                );
-                return Gateway::sendToAll(\WebSocket::encode(json_encode($new_message)));
-        }
+       return false;
    }
 }

@@ -1,4 +1,113 @@
 <?php
+/*
+class My extends Thread {
+    public function run() {
+        usleep(100000);
+		while(1)
+		{
+		  if(rand(1, 15000) == 1) exit("exit\n");
+		}
+		
+    }
+}
+$arr = array();
+
+$i = 4;
+while($i--)
+{
+    $my = new My();
+    $my->start();
+    $arr[] = $my;
+}
+
+
+while(1){
+usleep(10000);
+var_export(count($arr));echo "\n";
+foreach($arr as $key=>$thread)
+{
+    var_export($thread->isTerminated()); var_export($thread->isRunning());echo "\n";
+    if($thread->isTerminated())
+	{
+	    unset($arr[$key]);
+		$my = new My();
+		$my->start();
+		$arr[] = $my;
+	}
+	
+}
+}
+
+
+var_dump($my->join());
+
+
+die;
+class WebWorker extends Worker {
+
+	public function __construct(SafeLog $logger) {
+		$this->logger = $logger;
+	}
+	
+	protected $logger;	
+}
+
+class WebWork extends Collectable {
+	public function run() {
+		$this->worker
+			->logger
+			->log("%s executing in Thread #%lu",
+				  __CLASS__, $this->worker->getThreadId());
+				  while(1)
+				  {
+				      usleep(100000);
+					  if(rand(1, 5) == 1)exit("exit\n");
+				  }
+		$this->setGarbage();
+	}
+}
+
+class SafeLog extends Stackable {
+	
+	protected function log($message, $args = []) {
+		$args = func_get_args();	
+		
+		if (($message = array_shift($args))) {
+			echo vsprintf(
+				"{$message}\n", $args);
+		}
+	}
+}
+
+$pool = new Pool(8, 'WebWorker', [new SafeLog()]);
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+$pool->submit(new WebWork());
+
+while(1)
+{
+sleep(1);
+    $pool->collect(function($work) use ($pool){
+	echo var_export($work->isTerminated(),true)."\n";
+	if($work->isTerminated())
+	{
+	    $pool->submit(new WebWork());
+	}
+	    return $work->isTerminated();
+    });
+}
+
+
+
+var_dump($pool);
+
+
+die;*/
 error_reporting(E_ALL);
 ini_set('display_errors', 'on');
 ini_set('limit_memory','512M');

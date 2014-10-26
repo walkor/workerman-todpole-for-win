@@ -5,7 +5,7 @@ require_once WORKERMAN_ROOT_DIR . 'Core/Events/Select.php';
 /**
  * 抽象Worker类
  * 必须实现start方法
-* @author walkor <worker-man@qq.com>
+* @author walkor <walkor@workerman.net>
 */
 abstract class AbstractWorker
 {
@@ -66,7 +66,6 @@ abstract class AbstractWorker
     public function __construct($worker_name = null)
     {
         $this->workerName = $worker_name ? $worker_name : get_class($this);
-        $this->installSignal();
         $this->addShutdownHook();
     }
     
@@ -83,41 +82,12 @@ abstract class AbstractWorker
     }
     
     /**
-     * 安装信号处理函数
+     * 安装信号处理函数（win系统不支持，为了兼容保留此函数）
      * @return void
      */
     protected function installSignal()
     {
-        // 报告进程状态
-        pcntl_signal(SIGINT, array($this, 'signalHandler'));
-        pcntl_signal(SIGHUP, array($this, 'signalHandler'));
-        // 设置忽略信号
-        pcntl_signal(SIGALRM, SIG_IGN);
-        pcntl_signal(SIGUSR1, SIG_IGN);
-        pcntl_signal(SIGUSR2, SIG_IGN);
-        pcntl_signal(SIGTTIN, SIG_IGN);
-        pcntl_signal(SIGTTOU, SIG_IGN);
-        pcntl_signal(SIGQUIT, SIG_IGN);
-        pcntl_signal(SIGPIPE, SIG_IGN);
-        pcntl_signal(SIGCHLD, SIG_IGN);
-    }
-    
-    /**
-     * 设置server信号处理函数
-     * @param integer $signal
-     * @return void
-     */
-    public function signalHandler($signal)
-    {
-        switch($signal)
-        {
-                // 停止该进程
-            case SIGINT:
-                // 平滑重启
-            case SIGHUP:
-                $this->workerStatus = self::STATUS_SHUTDOWN;
-                break;
-        }
+        return true;
     }
     
     /**
@@ -126,21 +96,7 @@ abstract class AbstractWorker
      */
     public function hasShutDown()
     {
-        pcntl_signal_dispatch();
         return $this->workerStatus == self::STATUS_SHUTDOWN;
-    }
-    
-    /**
-     * 获取主进程统计信息
-     * @return array
-     */
-    protected function getMasterStatus()
-    {
-        if(!Master::getShmId())
-        {
-            return array();
-        }
-        return shm_get_var(Master::getShmId(), Master::STATUS_VAR_ID);
     }
     
     /**
@@ -225,7 +181,7 @@ abstract class AbstractWorker
                 return 'E_CORE_ERROR';
             case E_CORE_WARNING: // 32 //
                 return 'E_CORE_WARNING';
-            case E_CORE_ERROR: // 64 //
+            case E_COMPILE_ERROR: // 64 //
                 return 'E_COMPILE_ERROR';
             case E_CORE_WARNING: // 128 //
                 return 'E_COMPILE_WARNING';
@@ -260,6 +216,20 @@ abstract class AbstractWorker
         {
             echo $str."\n";
         }
+    }
+    
+    /**
+     * 关闭标准输入输出
+     * @return void
+     */
+    protected function resetFd()
+    {
+        global $STDOUT, $STDERR;
+        @fclose(STDOUT);
+        @fclose(STDERR);
+        // 将标准输出重定向到/dev/null
+        $STDOUT = fopen('/dev/null',"rw+");
+        $STDERR = fopen('/dev/null',"rw+");
     }
     
 }

@@ -3,7 +3,7 @@ namespace Man\Core\Lib;
 /**
  * 
  * 配置
- * @author walkor
+ * @author walkor<walkor@workerman.net>
  *
  */
 class Config

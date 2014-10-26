@@ -3,7 +3,7 @@ namespace Man\Core\Lib;
 /**
  * 环境检查相关
  * 
-* @author walkor <worker-man@qq.com>
+* @author walkor <walkor@workerman.net>
  */
 class Checker
 {
@@ -33,15 +33,6 @@ class Checker
     protected static $maxProcessCountLength = 9;
     
     /**
-     * 检查启动worker进程的的用户是否合法
-     * @return void
-     */
-    public static function checkWorkerUserName($worker_user)
-    {
-        return true;
-    }
-    
-    /**
      * 检查扩展支持情况
      * @return void
      */
@@ -49,38 +40,35 @@ class Checker
     {
         // 扩展名=>是否是必须
         $need_map = array(
-                        'sysvshm'   => false,
-                        'sysvmsg'   => false,
-                        'libevent'  => false,
-                        'proctitle' => false,
+            'pthreads'   => true,
         );
     
         // 检查每个扩展支持情况
-        echo "-----------------------\033[47;30m EXTENSION \033[0m------------------------------\n";
+        $echo_ext_string = false;
         $pad_length = 26;
         foreach($need_map as $ext_name=>$must_required)
         {
             $suport = extension_loaded($ext_name);
             if($must_required && !$suport)
             {
-                \Man\Core\Master::notice($ext_name. " [NOT SUPORT BUT REQUIRED] \tYou have to compile CLI version of PHP with --enable-{$ext_name} \tWorkerman start fail");
-                exit('* ' . $ext_name. " \033[31;40m [NOT SUPORT BUT REQUIRED] \033[0m\n\n\033[31;40mYou have to compile CLI version of PHP with --enable-{$ext_name} \033[0m\n\n\033[31;40mWorkerman start fail\033[0m\n\n");
+                if(!$echo_ext_string)
+                {
+                    echo "----------------------- EXTENSION ------------------------------\n";
+                    $echo_ext_string = true;
+                }
+                \Man\Core\Master::notice($ext_name. " [NOT SUPORT BUT REQUIRED] You have to install  $ext_name extension \tWorkerman start fail");
+                exit('* ' . $ext_name. "  [NOT SUPORT BUT REQUIRED] You have to install  $ext_name extension \r\n\r\nWorkerman start fail\r\n\r\n");
             }
     
-            // 支持扩展
-            if($suport)
-            {
-                echo str_pad('* ' . $ext_name, $pad_length), "\033[32;40m [OK] \033[0m\n";
-            }
             // 不支持
-            else
+            if(!$suport)
             {
-                // ev uv inotify不是必须
-                if('proctitle' == $ext_name)
+                if(!$echo_ext_string)
                 {
-                    continue;
+                    echo "----------------------- EXTENSION ------------------------------\n";
+                    $echo_ext_string = true;
                 }
-                echo '* ' , str_pad($ext_name, $pad_length), "\033[33;40m [NOT SUPORT] \033[0m\n";
+                echo '* ' , str_pad($ext_name, $pad_length), " [NOT SUPORT] \n";
             }
         }
     }
@@ -93,9 +81,8 @@ class Checker
     {
         // 可能禁用的函数
         $check_func_map = array(
-                        'stream_socket_server',
-                        'stream_socket_client',
-                        'pcntl_signal_dispatch',
+            'stream_socket_server',
+            'stream_socket_client',
         );
         if($disable_func_string = ini_get("disable_functions"))
         {
@@ -107,7 +94,7 @@ class Checker
             if(isset($disable_func_map[$func]))
             {
                 \Man\Core\Master::notice("Function $func may be disabled\tPlease check disable_functions in php.ini \t Workerman start fail");
-                exit("\n\033[31;40mFunction $func may be disabled\nPlease check disable_functions in php.ini\033[0m\n\n\033[31;40mWorkerman start fail\033[0m\n\n");
+                exit("\nFunction $func may be disabled\nPlease check disable_functions in php.ini\n\nWorkerman start fail\n\n");
             }
         }
     }
@@ -134,27 +121,12 @@ class Checker
             }
         }
         $total_worker_count = 0;
-        // 检查worker 是否有语法错误
-         echo "------------------------\033[47;30m WORKERS \033[0m-------------------------------\n";
-        echo "\033[47;30muser\033[0m",str_pad('', self::$maxUserNameLength+2-strlen('user')), "\033[47;30mworker\033[0m",str_pad('', self::$maxWorkerNameLength+2-strlen('worker')), "\033[47;30mlisten\033[0m",str_pad('', self::$maxListenLength+2-strlen('listen')), "\033[47;30mprocesses\033[0m",str_pad('', self::$maxProcessCountLength+2-strlen('processes')),"\033[47;30m","status\033[0m\n";
+        // 检查worker 
+        echo "------------------------ WORKERS -------------------------------\n";
+        echo "worker",str_pad('', self::$maxWorkerNameLength+2-strlen('worker')), "listen",str_pad('', self::$maxListenLength+2-strlen('listen')), "processes",str_pad('', self::$maxProcessCountLength+2-strlen('processes')),"","status\n";
         foreach (Config::getAllWorkers() as $worker_name=>$config)
         {
-            if(isset($config['user']))
-            {
-                $worker_user = $config['user'];
-                if(!self::checkWorkerUserName($worker_user))
-                {
-                    echo str_pad($config['user'], self::$maxUserNameLength+2),str_pad($worker_name, self::$maxWorkerNameLength+2),"\033[31;40m [FAIL] \033[0m\n";
-                    \Man\Core\Master::notice("Can not run $worker_name processes as user $worker_user , User $worker_user not exists\tWorkerman start fail");
-                    exit("\n\033[31;40mCan not run $worker_name processes as user $worker_user , User $worker_user not exists\033[0m\n\n\033[31;40mWorkerman start fail\033[0m\n\n");
-                }
-            }
-            else
-            {
-                $worker_user = $current_user_name;
-            }
-            
-            echo str_pad($worker_user, self::$maxUserNameLength+2),str_pad($worker_name, self::$maxWorkerNameLength+2);
+            echo str_pad($worker_name, self::$maxWorkerNameLength+2);
             
             if(isset($config['listen']))
             {
@@ -168,7 +140,7 @@ class Checker
             if(empty($config['start_workers']))
             {
                 \Man\Core\Master::notice(str_pad($worker_name, 40)." [start_workers not set]\tWorkerman start fail");
-                exit(str_pad('', self::$maxProcessCountLength+2)."\033[31;40m [start_workers not set]\033[0m\n\n\033[31;40mWorkerman start fail\033[0m\n");
+                exit(str_pad('', self::$maxProcessCountLength+2)." [start_workers not set]\n\nWorkerman start fail\n");
             }
             
             echo str_pad(' '.$config['start_workers'], self::$maxProcessCountLength+2);
@@ -176,84 +148,22 @@ class Checker
             $total_worker_count += $config['start_workers'];
     
             // 语法检查
-            if($worker_file = \Man\Core\Lib\Config::get($worker_name.'.worker_file'))
-            {
-                $class_name = basename($worker_file, '.php');
-            }
-            else
+            if(!$worker_file = \Man\Core\Lib\Config::get($worker_name.'.worker_file'))
             {
                 \Man\Core\Master::notice("$worker_name not set worker_file in conf/conf.d/$worker_name.conf");
-                echo"\033[31;40m [not set worker_file] \033[0m\n";
+                echo" [not set worker_file] \n";
                 continue;
             }
-            if(0 != self::checkSyntaxError($worker_file, $class_name))
-            {
-                //unset(Config::instance()->config[$worker_name]);
-                \Man\Core\Master::notice("$worker_name has Fatal Err");
-                echo"\033[31;40m [Fatal Err] \033[0m\n";
-                continue;
-            }
-            echo "\033[32;40m [OK] \033[0m\n";
+           
+            echo " [OK] \n";
         }
     
         if($total_worker_count > \Man\Core\Master::SERVER_MAX_WORKER_COUNT)
         {
             \Man\Core\Master::notice("Number of worker processes can not be greater than " . \Man\Core\Master::SERVER_MAX_WORKER_COUNT . ".\tPlease check start_workers in " . WORKERMAN_ROOT_DIR . "config/main.php\tWorkerman start fail");
-            exit("\n\033[31;40mNumber of worker processes can not be greater than " . \Man\Core\Master::SERVER_MAX_WORKER_COUNT . ".\nPlease check start_workers in " . WORKERMAN_ROOT_DIR . "config/main.php\033[0m\n\n\033[31;40mWorkerman start fail\033[0m\n");
+            exit("\nNumber of worker processes can not be greater than " . \Man\Core\Master::SERVER_MAX_WORKER_COUNT . ".\nPlease check start_workers in " . WORKERMAN_ROOT_DIR . "config/main.php\n\nWorkerman start fail\n");
         }
     
         echo "----------------------------------------------------------------\n";
-    }
-    
-    /**
-     * 检查worker文件是否有语法错误
-     * @param string $worker_name
-     * @return int 0：无语法错误 其它:可能有语法错误
-     */
-    public static function checkSyntaxError($file, $class_name = null)
-    {
-       return 0;
-    }
-    
-    /**
-     * 检查打开文件限制
-     * @return void
-     */
-    public static function checkLimit()
-    {
-       
-    }
-    
-    /**
-     * 检查配置的pid文件是否可写
-     * @return void
-     */
-    public static function checkPidFile()
-    {
-        // 已经有进程pid可能server已经启动
-        if(@file_get_contents(WORKERMAN_PID_FILE))
-        {
-            \Man\Core\Master::notice("\033[33;40mWorkerman already started\033[0m", true);
-            exit;
-        }
-        
-        if(is_dir(WORKERMAN_PID_FILE))
-        {
-            exit("\n\033[31;40mpid-file ".WORKERMAN_PID_FILE." is Directory\033[0m\n\n\033[31;40mWorkerman start failed\033[0m\n\n");
-        }
-        
-        $pid_dir = dirname(WORKERMAN_PID_FILE);
-        if(!is_dir($pid_dir))
-        {
-            if(!mkdir($pid_dir, true))
-            {
-                exit("Create dir $pid_dir fail\n");
-            }
-        }
-        
-        if(!is_writeable($pid_dir))
-        {
-            exit("\n\033[31;40mYou should start the server as root\033[0m\n\n\033[31;40mWorkerman start failed\033[0m\n\n");
-        }
     }
 }

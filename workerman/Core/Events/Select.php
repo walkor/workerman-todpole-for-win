@@ -6,7 +6,7 @@ require_once WORKERMAN_ROOT_DIR . 'Core/Events/interfaces.php';
  * select 轮询封装
  * 如果没有其它可用库worker进程也会自动使用该库
  * 
-* @author walkor <worker-man@qq.com>
+* @author walkor <walkor@workerman.net>
  */
 
 class Select implements BaseEvent
@@ -164,11 +164,12 @@ class Select implements BaseEvent
             $write = $this->writeFds;
          
             // stream_select false：出错 0：超时
-            if(!($ret = stream_select($read, $write, $e, 1)))
+            if(!($ret = @stream_select($read, $write, $e, 1)))
             {
                 // 超时
                 if($ret === 0)
                 {
+                    \Man\Core\Lib\Task::tick();
                 }
                 // 被系统调用或者信号打断
                 elseif($ret === false)
