@@ -1,15 +1,10 @@
 <?php
 namespace Man\Core\Lib;
 /**
- * 锁
+ * 信号量
  */
 class Mutex
 {
-    /**
-     * 共享内存key
-     * @var int
-     */
-    const SEM_KEY = IPC_KEY;
     
     /**
      * 信号量
@@ -23,8 +18,7 @@ class Mutex
      */
     public static function get()
     {
-        self::getSemFd() && sem_acquire(self::getSemFd());
-        return true;
+        \Mutex::lock(self::getSemFd());
     }
     
     /**
@@ -33,8 +27,7 @@ class Mutex
      */
     public static function release()
     {
-        self::getSemFd() && sem_release(self::getSemFd());
-        return true;
+        \Mutex::unlock(self::getSemFd());
     }
     
     /**
@@ -42,9 +35,9 @@ class Mutex
      */
     protected static function getSemFd()
     {
-        if(!self::$semFd && extension_loaded('sysvsem'))
+        if(!self::$semFd )
         {
-            self::$semFd = sem_get(self::SEM_KEY);
+            self::$semFd = \Mutex::create();
         }
         return self::$semFd;
     }

@@ -36,7 +36,7 @@ class Master
      * 版本
      * @var string
      */
-    const VERSION = '2.0.1-for-win';
+    const VERSION = '2.0.4-for-win';
     
     /**
      * 服务名
@@ -125,6 +125,8 @@ class Master
         self::init();
         // 检查环境
         self::checkEnv();
+        // 执行各个项目启动前脚本
+        self::beforeStart();
         // 创建监听套接字
         self::createSocketsAndListen();
         // 创建worker进程
@@ -161,6 +163,22 @@ class Master
         
         // 检查配置和语法错误等
         Lib\Checker::checkWorkersConfig();
+    }
+    
+    /**
+     * 启动前执行各个配置中的前置脚本
+     * 一般是用来清理数据
+     */
+    public static function beforeStart()
+    {
+        foreach (Lib\Config::getAllWorkers() as $worker_name=>$config)
+        {
+            $hook_file = isset($config['before_start']) ? $config['before_start'] : '';
+            if($hook_file && is_file($hook_file))
+            {
+                require $hook_file;
+            }
+        }
     }
     
     
