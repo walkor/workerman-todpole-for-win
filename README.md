@@ -5,12 +5,22 @@ workerman-todpole-for-win
 
 [线上DEMO](http://kedou.workerman.net)  
 
-说明
+安装
 ========
-windows 平台双击运行 start.bat
-（注意：windows平台需要php是线程安全版本，并且有pthreads扩展， win平台线程安全版本连接 http://windows.php.net/download/ ）  
 
+安装
+==============
+## 1、要求安装php多线程安全版本及pthreads扩展，并设置php环境变量
+PHP5.6线程安全版本下载链接：[http://windows.php.net/download](http://windows.php.net/download)   
+pthreads2.0.9 for php5.6 下载链接： [http://windows.php.net/downloads/pecl/releases/pthreads](http://windows.php.net/downloads/pecl/releases/pthreads/)    
+![安装线程安全php及pthreads](http://www.workerman.net/img/gif/install-php-pthread.gif)
+
+## 2、设置php.ini，开启sockets、pthreads扩展
+![设置php.ini](http://www.workerman.net/img/gif/php-ini-config.gif)
+
+## 3、下载workerman-for-win并启动
 运行起来后浏览器访问 http://ip:8383 例如 http://127.0.0.1:8383
+![启动workerman-for-win](http://www.workerman.net/img/gif/run-todpole-for-win.gif)
 
 
 非常感谢Rumpetroll
