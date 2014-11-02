@@ -6,9 +6,6 @@ workerman-todpole-for-win
 [线上DEMO](http://kedou.workerman.net)  
 
 安装
-========
-
-安装
 ==============
 ## 1、要求安装php线程安全版
 线程安全版本下载页面：[http://windows.php.net/download](http://windows.php.net/download)   
