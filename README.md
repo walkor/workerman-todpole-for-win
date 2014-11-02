@@ -12,10 +12,10 @@ workerman-todpole-for-win
 ==============
 ## 1、要求安装php线程安全版
 线程安全版本下载页面：[http://windows.php.net/download](http://windows.php.net/download)   
-pthreads下载下载页面： [http://windows.php.net/downloads/pecl/releases/pthreads](http://windows.php.net/downloads/pecl/releases/pthreads/)    
 ![安装线程安全php并设置环境变量](http://www.workerman.net/img/gif/install-php.gif)
 
 ## 2、安装pthreads扩展
+pthreads下载下载页面： [http://windows.php.net/downloads/pecl/releases/pthreads](http://windows.php.net/downloads/pecl/releases/pthreads/)    
 ![安装pthreads扩展](http://www.workerman.net/img/gif/install-pthreads.gif)
 
 ## 3、下载workerman-for-win并启动
