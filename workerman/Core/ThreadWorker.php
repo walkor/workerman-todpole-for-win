@@ -56,6 +56,8 @@ class ThreadWorker extends \Thread
      */
     public function run()
     {
+        date_default_timezone_set('Asia/Shanghai');
+        
         // 保存一个副本
         $this->mainSocket = $this->worker->mainSocket;
         

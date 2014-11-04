@@ -214,7 +214,8 @@ abstract class SocketWorker extends AbstractWorker
         //事件轮询库
         if(extension_loaded('libevent'))
         {
-            $this->setEventLoopName('Libevent');
+            // 暂时注释掉
+            //$this->setEventLoopName('Libevent');
         }
         
         // 检查退出状态

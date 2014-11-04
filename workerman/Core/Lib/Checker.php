@@ -57,7 +57,7 @@ class Checker
                     $echo_ext_string = true;
                 }
                 \Man\Core\Master::notice($ext_name. " [NOT SUPORT BUT REQUIRED] You have to install  $ext_name extension \tWorkerman start fail");
-                exit('* ' . $ext_name. "  [NOT SUPORT BUT REQUIRED] You have to install  $ext_name extension \r\n\r\nWorkerman start fail\r\n\r\n");
+                exit('* ' . $ext_name. "  [NOT SUPORT BUT REQUIRED] \r\nYou have to install  $ext_name extension \r\n\r\nWorkerman start fail\r\n\r\n");
             }
     
             // 不支持
