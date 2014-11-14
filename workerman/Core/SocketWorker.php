@@ -473,8 +473,12 @@ abstract class SocketWorker extends AbstractWorker
      * @param int $fd
      * @return void
      */
-    protected function closeClient($fd)
+    protected function closeClient($fd = null)
     {
+        if(empty($fd))
+        {
+            $fd = $this->currentDealFd;
+        }
         // udp忽略
         if($this->protocol != 'udp' && isset($this->connections[$fd]))
         {
