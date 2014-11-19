@@ -74,7 +74,9 @@ class File
      */
     public function get($key, $use_cache = true)
     {
+        flock($this->dataFileHandle, LOCK_EX);
         $this->readDataFromDisk();
+        flock($this->dataFileHandle, LOCK_UN);
         return isset($this->dataCache[$key]) ? $this->dataCache[$key] : null;
     }
    
