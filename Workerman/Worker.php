@@ -12,7 +12,8 @@
  * @license http://www.opensource.org/licenses/mit-license.php MIT License
  */
 namespace Workerman;
-ini_set('display_errors', 'on');
+
+require_once __DIR__ . '/Lib/Constants.php';
 
 use \Workerman\Events\Libevent;
 use \Workerman\Events\Select;
@@ -189,7 +190,7 @@ class Worker
      * 例如 new worker('http://0.0.0.0:8080');指定使用http协议
      * @var string
      */
-    protected $_protocol = '';
+    protected $protocol = '';
     
     /**
      * 当前worker实例初始化目录位置，用于设置应用自动加载的根目录
@@ -644,11 +645,11 @@ class Worker
         if($scheme != 'tcp' && $scheme != 'udp')
         {
             $scheme = ucfirst($scheme);
-            $this->_protocol = '\\Protocols\\'.$scheme;
-            if(!class_exists($this->_protocol))
+            $this->protocol = '\\Protocols\\'.$scheme;
+            if(!class_exists($this->protocol))
             {
-                $this->_protocol = "\\Workerman\\Protocols\\$scheme";
-                if(!class_exists($this->_protocol))
+                $this->protocol = "\\Workerman\\Protocols\\$scheme";
+                if(!class_exists($this->protocol))
                 {
                     throw new Exception("class \\Protocols\\$scheme not exist");
                 }
@@ -767,38 +768,34 @@ class Worker
      */
     public function acceptConnection($socket)
     {
-        // 获得客户端连接
-        $new_socket = stream_socket_accept($socket, 0);
-        
-        // 惊群现象，忽略
-        if(!$new_socket)
-        {
+         // Accept a connection on server socket.
+        $new_socket = @stream_socket_accept($socket, 0, $remote_address);
+        // Thundering herd.
+        if (!$new_socket) {
             return;
         }
-        // 统计数据
-        ConnectionInterface::$statistics['connection_count']++;
-        // 初始化连接对象
-        $connection = new TcpConnection($new_socket);
+
+        // TcpConnection.
+        $connection                         = new TcpConnection($new_socket, $remote_address);
         $this->connections[$connection->id] = $connection;
-        $connection->worker = $this;
-        $connection->protocol = $this->_protocol;
-        $connection->onMessage = $this->onMessage;
-        $connection->onClose = $this->onClose;
-        $connection->onError = $this->onError;
-        $connection->onBufferDrain = $this->onBufferDrain;
-        $connection->onBufferFull = $this->onBufferFull;
-        
-        // 如果有设置连接回调，则执行
-        if($this->onConnect)
-        {
-            try
-            {
+        $connection->worker                 = $this;
+        $connection->protocol               = $this->protocol;
+        $connection->onMessage              = $this->onMessage;
+        $connection->onClose                = $this->onClose;
+        $connection->onError                = $this->onError;
+        $connection->onBufferDrain          = $this->onBufferDrain;
+        $connection->onBufferFull           = $this->onBufferFull;
+
+        // Try to emit onConnect callback.
+        if ($this->onConnect) {
+            try {
                 call_user_func($this->onConnect, $connection);
-            }
-            catch(Exception $e)
-            {
-                ConnectionInterface::$statistics['throw_exception']++;
+            } catch (\Exception $e) {
                 self::log($e);
+                exit(250);
+            } catch (\Error $e) {
+                self::log($e);
+                exit(250);
             }
         }
     }
@@ -818,9 +815,9 @@ class Worker
         $connection = new UdpConnection($socket, $remote_address);
         if($this->onMessage)
         {
-            if($this->_protocol)
+            if($this->protocol)
             {
-                $parser = $this->_protocol;
+                $parser = $this->protocol;
                 $recv_buffer = $parser::decode($recv_buffer, $connection);
             }
             ConnectionInterface::$statistics['total_request']++;
