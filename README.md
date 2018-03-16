@@ -1,3 +1,5 @@
+**https://github.com/walkor/workerman-todpole 已经支持windows系统，此版本不再更新**
+
 # workerman-todpole-for-win
 小蝌蚪windows版本
 
